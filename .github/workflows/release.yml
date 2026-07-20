@@ -1,0 +1,44 @@
+name: release
+
+on:
+    push:
+        tags:
+            - "v*"
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: denoland/setup-deno@v2
+              with:
+                  deno-version: v2.x
+
+            - name: Install dependencies
+              run: deno install --frozen
+
+            - name: Check version
+              run: |
+                  manifest_version="$(jq -r '.version' src/manifests/chrome.json)"
+                  tag_version="${GITHUB_REF_NAME#v}"
+
+                  if [ "$manifest_version" != "$tag_version" ]; then
+                      echo "Tag version $tag_version does not match manifest version $manifest_version"
+                      exit 1
+                  fi
+
+            - name: Build release archives
+              run: deno run --allow-all tasks/archive.ts
+
+            - name: Create GitHub release and upload archives
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh release create "$GITHUB_REF_NAME" \
+                      release/bonjourr-*.zip \
+                      --generate-notes \
+                      --title "$GITHUB_REF_NAME"
