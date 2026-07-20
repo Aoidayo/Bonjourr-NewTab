@@ -66,6 +66,14 @@ const formBackgroundUserColl = networkForm('f_background-user-coll')
 const formBackgroundUserSearch = networkForm('f_background-user-search')
 
 export function backgroundsInit(sync: Sync, local: Local, init?: true): void {
+    applyFilters({
+        ...sync.backgrounds,
+        fadeinBackground: sync.backgrounds.fadeinBackground ?? {
+            type: 'system',
+            color: '#ffffff',
+        },
+    })
+
     if (init) {
         // Rush background opacity to reduce black frames
         const type = sync.backgrounds.type
@@ -88,13 +96,6 @@ export function backgroundsInit(sync: Sync, local: Local, init?: true): void {
     }
 
     toggleCredits(sync.backgrounds)
-    applyFilters({
-        ...sync.backgrounds,
-        fadeinBackground: sync.backgrounds.fadeinBackground ?? {
-            type: 'system',
-            color: '#ffffff',
-        },
-    })
     applyTexture(sync.backgrounds.texture)
     handleBackgroundActions(sync.backgrounds)
     document.getElementById('background-wrapper')?.setAttribute('data-type', sync.backgrounds.type)

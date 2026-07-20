@@ -12,7 +12,7 @@
     --brightness: 0.8;
     --load-time-transition: 0ms;
     --solid-background: black;
-    --average-color: black;
+    --average-color: white;
 
     --text-shadow-alpha: 0.2;
     --text-shadow-interface: 1px 2px 6px rgb(0 0 0 / var(--text-shadow-alpha));
@@ -36,6 +36,12 @@
     --color-orange: #fe9030;
     --border-radius: 25px; /* global border-radius value */
     --out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --average-color: black;
+    }
 }
 
 [data-theme='light'] {
