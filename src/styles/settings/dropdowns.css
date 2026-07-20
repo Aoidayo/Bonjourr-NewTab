@@ -186,7 +186,11 @@
 }
 
 .all .as_fadein {
-    max-height: 60px;
+    max-height: 165px;
+}
+
+#fadein-background-color.hidden {
+    display: none;
 }
 
 .all .as_link {

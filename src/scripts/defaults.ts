@@ -134,6 +134,10 @@ export const SYNC_DEFAULT: Sync = {
     backgrounds: {
         type: 'images',
         fadein: 600,
+        fadeinBackground: {
+            type: 'system',
+            color: '#ffffff',
+        },
         blur: 15,
         bright: 0.8,
         frequency: 'hour',

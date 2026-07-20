@@ -177,6 +177,9 @@ function initOptionsValues(data: Sync, local: Local): void {
     setInput('i_blur', data.backgrounds.blur ?? 15)
     setInput('i_bright', data.backgrounds.bright ?? 0.8)
     setInput('i_fadein', data.backgrounds.fadein ?? 400)
+    displayFadeinValue(data.backgrounds.fadein ?? 400)
+    setInput('i_fadein-background', data.backgrounds.fadeinBackground?.type ?? 'system')
+    setInput('i_fadein-background-color', data.backgrounds.fadeinBackground?.color ?? '#ffffff')
     setInput('i_row', data.linksrow || 8)
     setInput('i_icon_radius', data.linkiconradius || 1.1)
     setInput('i_linkstyle', data.linkstyle || 'default')
@@ -273,8 +276,14 @@ function initOptionsValues(data: Sync, local: Local): void {
     setCheckbox('i_supporters_notif', data.supporters?.enabled ?? true)
 
     colorInput('solid-background', data.backgrounds.color)
+    colorInput('fadein-background', data.backgrounds.fadeinBackground?.color ?? '#ffffff')
     colorInput('texture-color', data.backgrounds.texture.color ?? '#ffffff')
     colorInput('font-color', data.font.color)
+
+    paramId('fadein-background-color').classList.toggle(
+        'hidden',
+        (data.backgrounds.fadeinBackground?.type ?? 'system') !== 'custom',
+    )
 
     paramId('i_notes-shade')?.classList.toggle('on', (data.notes?.background ?? '#fff').includes('#000'))
     paramId('i_sb-shade')?.classList.toggle('on', (data.searchbar?.background ?? '#fff').includes('#000'))
@@ -601,7 +610,22 @@ function initOptionsEvents(): void {
     })
 
     paramId('i_fadein').addEventListener('input', function (this: HTMLInputElement): void {
+        displayFadeinValue(this.value)
         backgroundUpdate({ fadein: this.value })
+    })
+
+    paramId('i_fadein-background').addEventListener('change', function (this: HTMLInputElement): void {
+        paramId('fadein-background-color').classList.toggle('hidden', this.value !== 'custom')
+        backgroundUpdate({ fadeinbackground: this.value })
+    })
+
+    paramId('b_fadein-background').addEventListener('click', function (): void {
+        paramId('i_fadein-background-color').click()
+    })
+
+    paramId('i_fadein-background-color').addEventListener('input', function (this: HTMLInputElement): void {
+        colorInput('fadein-background', this.value)
+        backgroundUpdate({ fadeinbackgroundcolor: this.value })
     })
 
     // Time and date
@@ -1645,6 +1669,14 @@ export function toggleSettingsDropdown(dropdownId: string, shown: boolean): void
 }
 
 //	Helpers
+
+function displayFadeinValue(value: string | number): void {
+    const output = document.getElementById('i_fadein-value')
+
+    if (output) {
+        output.textContent = `${value} ms`
+    }
+}
 
 function paramId(str: string): HTMLInputElement {
     return document.getElementById(str) as HTMLInputElement

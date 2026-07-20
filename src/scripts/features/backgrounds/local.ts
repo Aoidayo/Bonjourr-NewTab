@@ -749,9 +749,15 @@ async function generateImageFromVideo(file: File): Promise<Blob | null> {
 }
 
 export async function localFilesCacheControl(backgrounds: Backgrounds, local: Local, needNew?: boolean): Promise<void> {
-    local = await sanitizeMetadatas(local)
+    let ids = lastUsedBackgroundFiles(local.backgroundFiles)
 
-    const ids = lastUsedBackgroundFiles(local.backgroundFiles)
+    // CacheStorage.keys() can take a noticeable amount of time when a new tab
+    // starts. The metadata is kept in sync whenever files are added or removed,
+    // so only scan the cache when that metadata is empty or stale.
+    if (ids.length === 0) {
+        local = await sanitizeMetadatas(local)
+        ids = lastUsedBackgroundFiles(local.backgroundFiles)
+    }
 
     if (ids.length === 0) {
         removeBackgrounds()
@@ -764,17 +770,36 @@ export async function localFilesCacheControl(backgrounds: Backgrounds, local: Lo
 
     needNew ??= needsChange(freq, lastUsed)
 
+    let id = ids[0]
+    let changed = false
+
     if (ids.length > 1 && needNew) {
         ids.shift()
 
         const rand = Math.floor(Math.random() * ids.length)
-        const id = ids[rand]
+        id = ids[rand]
+        changed = true
+    }
+
+    try {
+        applyBackground(await mediaFromFiles(id, local))
+    } catch (_) {
+        // Recover from metadata left behind by an evicted or corrupted cache.
+        local = await sanitizeMetadatas(local)
+        ids = lastUsedBackgroundFiles(local.backgroundFiles)
+        id = ids[0]
+
+        if (!id) {
+            removeBackgrounds()
+            return
+        }
 
         applyBackground(await mediaFromFiles(id, local))
+    }
+
+    if (changed) {
         local.backgroundFiles[id].lastUsed = new Date().toString()
-        storage.local.set(local)
-    } else {
-        applyBackground(await mediaFromFiles(ids[0], local))
+        storage.local.set({ backgroundFiles: local.backgroundFiles })
     }
 }
 
@@ -802,8 +827,14 @@ async function saveFileToCache(id: string, filedata: LocalFileData): Promise<voi
 export async function getFileFromCache(id: string): Promise<LocalFileData> {
     const cache = await getCache('local-files')
 
-    const full = await (await cache?.match(`http://127.0.0.1:8888/${id}/full`))?.blob()
-    const small = await (await cache?.match(`http://127.0.0.1:8888/${id}/small`))?.blob()
+    const [fullResponse, smallResponse] = await Promise.all([
+        cache.match(`http://127.0.0.1:8888/${id}/full`),
+        cache.match(`http://127.0.0.1:8888/${id}/small`),
+    ])
+    const [full, small] = await Promise.all([
+        fullResponse?.blob(),
+        smallResponse?.blob(),
+    ])
 
     if (!full || !small) {
         throw new Error(`${id} is undefined`)

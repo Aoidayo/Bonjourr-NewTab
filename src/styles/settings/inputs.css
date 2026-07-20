@@ -342,10 +342,10 @@ aside .color-button button {
     background-color: rgb(var(--input-color));
     border: 1px solid
         color-mix(
-            in srgb,
-            rgb(var(--input-color)) 85%,
-            black
-        );
+        in srgb,
+        rgb(var(--input-color)) 85%,
+        black
+    );
     direction: ltr;
 }
 
@@ -355,6 +355,24 @@ aside .inputWithSuffix {
     justify-content: center;
     align-items: center;
     gap: 10px;
+}
+
+aside .range-with-value {
+    width: 155px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+aside .range-with-value input[type='range'] {
+    width: 105px;
+}
+
+aside .range-with-value output {
+    min-width: 42px;
+    color: var(--color-light-text);
+    font-size: 0.8em;
+    text-align: end;
 }
 
 aside .inputWithSuffix input {

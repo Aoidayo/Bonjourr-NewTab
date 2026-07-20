@@ -1,7 +1,7 @@
 import { addGroup, changeGroupTitle, deleteGroup, initGroups, moveGroups, toggleGroups } from './groups.ts'
 import { initBookmarkSync, syncBookmarks } from './bookmarks.ts'
 import { openContextMenu } from '../contextmenu.ts'
-import { storeIconFile } from './fileicons.ts'
+import { cacheAutoIcon, storeIconFile } from './fileicons.ts'
 import { folderClick } from './folders.ts'
 import { startDrag } from './drag.ts'
 import {
@@ -105,7 +105,10 @@ type LinksInit = {
 }
 
 const domlinkblocks = document.getElementById('linkblocks') as HTMLDivElement
-let initIconList: [HTMLImageElement, string][] = []
+type InitIcon = [image: HTMLImageElement, source: string, id: string, automatic: boolean]
+
+const ICON_FALLBACK = 'src/assets/labels/globe-alt.svg'
+let initIconList: InitIcon[] = []
 let selectallTimer: ReturnType<typeof setTimeout>
 
 export async function quickLinks(init?: LinksInit, event?: LinksUpdate): Promise<void> {
@@ -282,7 +285,7 @@ function createFolder(link: LinkFolder, folderChildren: Link[], style: Sync['lin
         const isIconShown = img && isElem(elem) && style !== 'text'
 
         if (isIconShown) {
-            initIconList.push([img, getIconFromLinkElem(elem)])
+            initIconList.push([img, getIconFromLinkElem(elem), elem._id, isAutomaticIcon(elem)])
         }
     }
 
@@ -304,7 +307,7 @@ function createElem(link: LinkElem, openInNewtab: boolean, style: Sync['linkstyl
     span.textContent = createTitle(link)
 
     if (style !== 'text') {
-        initIconList.push([img, getIconFromLinkElem(link)])
+        initIconList.push([img, getIconFromLinkElem(link), link._id, isAutomaticIcon(link)])
     }
 
     if (openInNewtab) {
@@ -315,18 +318,36 @@ function createElem(link: LinkElem, openInNewtab: boolean, style: Sync['linkstyl
 }
 
 function createIcons(local: Local): void {
-    for (const [img, url] of initIconList) {
+    const remoteIcons: InitIcon[] = []
+
+    for (const [img, url, id, automatic] of initIconList) {
         if (url.startsWith('link')) {
             img.src = local[`x-icon-${url}`] ?? ''
+        } else if (automatic) {
+            const cached = local[`x-auto-icon-${id}`]
+
+            if (cached?.source === url && cached.data) {
+                img.src = cached.data
+            } else if (cached?.source === url && cached.failed) {
+                img.src = ICON_FALLBACK
+                img.dataset.iconState = 'failed'
+            } else {
+                img.src = 'src/assets/interface/loading.svg'
+                cacheAutoIcon(id, url).then((result) => {
+                    img.src = result.data ?? ICON_FALLBACK
+                    img.dataset.iconState = result.failed ? 'failed' : 'cached'
+                })
+            }
         } else {
             img.src = url
+            remoteIcons.push([img, url, id, automatic])
         }
     }
 
     setTimeout(() => {
         // naturalWidth is needed here because complete doesn't tell the whole story
         // it only says if it's finished loading or not, even an error code will say "complete"
-        const incomplete = initIconList.filter(
+        const incomplete = remoteIcons.filter(
             ([img]) => !img.complete || img.naturalWidth === 0,
         )
 
@@ -342,7 +363,7 @@ function createIcons(local: Local): void {
 
             // if obvious error (dead link...), shows fallback
             newimg.addEventListener('error', () => {
-                img.src = 'https://services.bonjourr.fr/favicon/blob/error'
+                img.src = ICON_FALLBACK
             })
 
             newimg.src = url
@@ -351,7 +372,7 @@ function createIcons(local: Local): void {
             setTimeout(() => {
                 if (!newimg.complete && newimg.naturalWidth === 0) {
                     console.error('Icon link took too long to load: ' + url)
-                    img.src = 'https://services.bonjourr.fr/favicon/blob/error'
+                    img.src = ICON_FALLBACK
                 }
             }, 5000)
         }
@@ -716,11 +737,15 @@ function deleteLinks(ids: string[], data: Sync): Sync {
 
         if (link.folder) {
             for (const child of getLinksInFolder(data, link._id)) {
+                storage.local.remove(`x-auto-icon-${child._id}`)
+                storage.local.remove(`x-icon-${child._id}`)
                 delete data[child._id]
             }
         }
 
         if (isElem(link)) {
+            storage.local.remove(`x-auto-icon-${id}`)
+
             if (link.icon?.type === 'file') {
                 storage.local.remove(`x-icon-${id}`)
             }
@@ -761,6 +786,7 @@ function refreshIcons(ids: string[], data: Sync): Sync {
         const link = data[id] as LinkElem
 
         if (link._id) {
+            storage.local.remove(`x-auto-icon-${id}`)
             const unixDate = Date.now().toString()
 
             if (!link.icon || link.icon.type === 'auto') {
@@ -916,6 +942,10 @@ function getIconFromLinkElem(link: LinkElem): string {
     }
 
     return link.icon.value
+}
+
+function isAutomaticIcon(link: LinkElem): boolean {
+    return !link.icon || link.icon.type === 'auto'
 }
 
 function isLinkStyle(s: string): s is Sync['linkstyle'] {

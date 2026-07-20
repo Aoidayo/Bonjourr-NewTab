@@ -76,6 +76,10 @@ export interface Backgrounds {
     type: 'files' | 'urls' | 'images' | 'videos' | 'color'
     frequency: Frequency
     fadein: number
+    fadeinBackground: {
+        type: 'system' | 'custom'
+        color: string
+    }
     bright: number
     blur: number
     color: string

@@ -45,6 +45,8 @@ interface BackgroundUpdate {
     files?: FileList | null
     bright?: string
     fadein?: string
+    fadeinbackground?: string
+    fadeinbackgroundcolor?: string
     refresh?: Event
     urlsapply?: true
     texture?: string
@@ -86,7 +88,13 @@ export function backgroundsInit(sync: Sync, local: Local, init?: true): void {
     }
 
     toggleCredits(sync.backgrounds)
-    applyFilters(sync.backgrounds)
+    applyFilters({
+        ...sync.backgrounds,
+        fadeinBackground: sync.backgrounds.fadeinBackground ?? {
+            type: 'system',
+            color: '#ffffff',
+        },
+    })
     applyTexture(sync.backgrounds.texture)
     handleBackgroundActions(sync.backgrounds)
     document.getElementById('background-wrapper')?.setAttribute('data-type', sync.backgrounds.type)
@@ -137,6 +145,25 @@ export async function backgroundUpdate(update: BackgroundUpdate): Promise<void> 
         applyFilters({ fadein: Number.parseInt(update.fadein) })
         propertiesUpdateDebounce({ fadein: Number.parseFloat(update.fadein) })
         fadeinPreviewDebounce(Number.parseFloat(update.fadein))
+        return
+    }
+
+    if (update.fadeinbackground !== undefined || update.fadeinbackgroundcolor !== undefined) {
+        data.backgrounds.fadeinBackground ??= {
+            type: 'system',
+            color: '#ffffff',
+        }
+
+        if (update.fadeinbackground === 'system' || update.fadeinbackground === 'custom') {
+            data.backgrounds.fadeinBackground.type = update.fadeinbackground
+        }
+        if (update.fadeinbackgroundcolor !== undefined) {
+            data.backgrounds.fadeinBackground.color = update.fadeinbackgroundcolor
+        }
+
+        storage.sync.set({ backgrounds: data.backgrounds })
+        applyFilters(data.backgrounds)
+        previewFadein(data.backgrounds.fadein)
         return
     }
 
@@ -773,7 +800,7 @@ export function removeBackgrounds(): void {
     setTimeout(() => mediaWrapper.firstChild?.remove(), 2000)
 }
 
-function applyFilters({ blur, bright, fadein }: Partial<Backgrounds>): void {
+function applyFilters({ blur, bright, fadein, fadeinBackground }: Partial<Backgrounds>): void {
     if (blur !== undefined) {
         document.documentElement.style.setProperty('--blur', `${blur}px`)
         document.body.classList.toggle('blurred', blur >= 15)
@@ -785,6 +812,12 @@ function applyFilters({ blur, bright, fadein }: Partial<Backgrounds>): void {
 
     if (fadein !== undefined) {
         document.documentElement.style.setProperty('--fade-in', `${fadein}ms`)
+    }
+
+    if (fadeinBackground !== undefined) {
+        const systemColor = globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? '#000000' : '#ffffff'
+        const fadeinColor = fadeinBackground.type === 'custom' ? fadeinBackground.color : systemColor
+        document.documentElement.style.setProperty('--average-color', fadeinColor)
     }
 }
 

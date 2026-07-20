@@ -32,6 +32,13 @@ export interface Local {
 
     // Links
     [key: `x-icon-${string}`]: string
+    [key: `x-auto-icon-${string}`]: AutoIconCache
+}
+
+export interface AutoIconCache {
+    source: string
+    data?: string
+    failed?: true
 }
 
 export interface LastWeather {

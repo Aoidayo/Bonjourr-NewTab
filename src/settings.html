@@ -492,16 +492,37 @@
 
             <div class="wrapper">
                 <label for="i_fadein" class="trn">Fade in time</label>
-                <input
-                    id="i_fadein"
-                    type="range"
-                    class="range"
-                    name="background_fadein"
-                    min="0"
-                    max="1200"
-                    value="400"
-                    step="100"
-                />
+                <div class="range-with-value">
+                    <input
+                        id="i_fadein"
+                        type="range"
+                        class="range"
+                        name="background_fadein"
+                        min="0"
+                        max="1200"
+                        value="400"
+                        step="100"
+                    />
+                    <output id="i_fadein-value" for="i_fadein">400 ms</output>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="wrapper">
+                <label for="i_fadein-background" class="trn">Fade in</label>
+                <select id="i_fadein-background">
+                    <option value="system" class="trn">System</option>
+                    <option value="custom" class="trn">Custom</option>
+                </select>
+            </div>
+
+            <div id="fadein-background-color" class="wrapper hidden">
+                <label for="i_fadein-background-color" class="trn">Background color</label>
+                <div id="fadein-background" class="color-button">
+                    <input type="color" id="i_fadein-background-color" name="fadein-background" tabindex="-1" />
+                    <button id="b_fadein-background">#ffffff</button>
+                </div>
             </div>
         </div>
     </div>

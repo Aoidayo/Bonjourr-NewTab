@@ -1,6 +1,8 @@
 import { compressAsDataUri, svgToText } from '../../shared/compress.ts'
 import { storage } from '../../storage.ts'
 
+import type { AutoIconCache } from '../../../types/local.ts'
+
 async function convertIconFileToDataUri(file: File): Promise<string> {
     if (!file.type.startsWith('image/')) {
         throw new Error('Icon file must be an image')
@@ -37,4 +39,41 @@ export async function storeIconFile(id: string, file: File): Promise<string> {
     storage.local.set({ [`x-icon-${id}`]: uri })
 
     return uri
+}
+
+export async function cacheAutoIcon(id: string, source: string): Promise<AutoIconCache> {
+    const key = `x-auto-icon-${id}` as const
+
+    try {
+        const response = await fetch(source, { cache: 'force-cache' })
+
+        if (!response.ok) {
+            throw new Error(`Icon request failed with ${response.status}`)
+        }
+
+        const blob = await response.blob()
+
+        if (!blob.type.startsWith('image/')) {
+            throw new Error(`Icon response is not an image: ${blob.type}`)
+        }
+
+        const data = await blobToDataUri(blob)
+        const cached = { source, data }
+        storage.local.set({ [key]: cached })
+        return cached
+    } catch (_) {
+        const cached: AutoIconCache = { source, failed: true }
+        storage.local.set({ [key]: cached })
+        return cached
+    }
+}
+
+function blobToDataUri(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+
+        reader.addEventListener('load', () => resolve(reader.result?.toString() ?? ''))
+        reader.addEventListener('error', () => reject(reader.error))
+        reader.readAsDataURL(blob)
+    })
 }
