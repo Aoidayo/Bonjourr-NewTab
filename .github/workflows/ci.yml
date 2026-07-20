@@ -1,12 +1,12 @@
 name: ci
 on:
     push:
-        branches:
-            - "*"
-        paths:
-            - "src/**"
-            - "tests/**"
-            - "_locales/**"
+        # branches:
+        #     - "*"
+        # paths:
+        #     - "src/**"
+        #     - "tests/**"
+        #     - "_locales/**"
 
 jobs:
     checks:
